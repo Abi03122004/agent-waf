@@ -1,0 +1,7 @@
+Welcome to Agent WAF!
+This is a sample notes.txt file containing system configuration reminders and internal notes.
+WAF project planning is underway.
+Remember to always secure tool execution!
+- API endpoint: /agent/chat
+- Port: 8000
+- Environment: Development
