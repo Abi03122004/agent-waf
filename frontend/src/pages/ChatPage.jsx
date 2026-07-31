@@ -115,7 +115,7 @@ export const ChatPage = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-4 space-y-6">
+    <div className="app-container py-4 space-y-6">
   
       {/* Suggested Prompt Chips */}
       <div className="space-y-2">
@@ -141,13 +141,13 @@ export const ChatPage = () => {
       </div>
 
       {/* Main Chat Assistant Frame */}
-      <div className="clean-card p-6 flex flex-col h-[560px]">
-        <div className="clean-card bg-opacity-25 bg-slate-950/20 flex-1 p-5 overflow-y-auto space-y-6 mb-4 scrollbar-thin flex flex-col">
+      <div className="clean-card p-4 sm:p-6 flex flex-col h-[560px]">
+        <div className="clean-card bg-opacity-25 bg-slate-950/20 flex-1 p-3 sm:p-5 overflow-y-auto space-y-6 mb-4 scrollbar-thin flex flex-col">
           {messages.map((msg) => (
             <div
               key={msg.id}
-              className={`flex items-start space-x-3 max-w-[85%] ${
-                msg.sender === 'user' ? 'self-end flex-row-reverse space-x-reverse' : 'self-start'
+              className={`flex items-start gap-3 max-w-full sm:max-w-[85%] ${
+                msg.sender === 'user' ? 'self-end flex-row-reverse' : 'self-start'
               }`}
             >
               {/* Avatar Indicator */}
@@ -158,7 +158,7 @@ export const ChatPage = () => {
               {/* Message Content Bubble Container */}
               <div className="space-y-1.5 flex flex-col">
                 <div
-                  className={`p-4 rounded-2xl text-xs leading-relaxed border relative group ${
+                  className={`p-3 sm:p-4 rounded-2xl text-xs leading-relaxed border relative group break-words min-w-0 ${
                     msg.sender === 'user'
                       ? 'bg-slate-100 dark:bg-white/10 text-slate-100 border-slate-300 dark:border-white/20'
                       : msg.isBlocked
@@ -180,7 +180,7 @@ export const ChatPage = () => {
 
                 {/* Sub-text tool metrics / response details */}
                 {msg.sender === 'agent' && (msg.toolUsed || msg.executionTime) && (
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-slate-500 font-mono pl-1">
+                  <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-500 font-mono pl-1">
                     {msg.toolUsed && (
                       <span className="flex items-center space-x-1 text-slate-300">
                         <Terminal className="w-3.5 h-3.5" />

@@ -28,7 +28,7 @@ export const Navbar = () => {
                 Agent <span className="font-black">WAF</span>
               </span>
               <span className="block text-[10px] text-slate-400 font-mono tracking-widest uppercase">
-                Aivar Cybersecurity
+                Security Platform
               </span>
             </div>
           </div>

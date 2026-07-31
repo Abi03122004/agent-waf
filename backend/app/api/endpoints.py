@@ -1,6 +1,8 @@
 import uuid
 import logging
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+import time
+from collections import defaultdict
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, Request, HTTPException, status
 
 from app.schemas.agent import AgentChatRequest, AgentChatResponse, AgentContext
 from app.agent.orchestrator import AgentOrchestrator
@@ -27,6 +29,30 @@ from app.rules.data_scope import DataScopeRule
 from app.rules.sequence import SequenceRule
 from app.core.policy_loader import policy_loader
 from app.tools.banking import TransferMoneyTool, CheckBalanceTool, GetTransactionHistoryTool
+
+class IPRateLimiter:
+    def __init__(self):
+        self.client_records = defaultdict(list)
+
+    async def __call__(self, request: Request):
+        if not settings.API_RATE_LIMIT_ENABLED:
+            return
+        
+        # Resolve client IP (supporting reverse proxies)
+        ip = request.headers.get("x-forwarded-for") or (request.client.host if request.client else "unknown")
+        
+        now = time.time()
+        # Filter timestamps within the rolling window
+        self.client_records[ip] = [t for t in self.client_records[ip] if now - t < settings.API_RATE_LIMIT_WINDOW]
+        
+        if len(self.client_records[ip]) >= settings.API_RATE_LIMIT_MAX:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many requests. Please try again later."
+            )
+        self.client_records[ip].append(now)
+
+api_rate_limiter = IPRateLimiter()
 
 router = APIRouter()
 
@@ -98,7 +124,7 @@ def get_orchestrator(registry: ToolRegistry = Depends(get_registry)) -> AgentOrc
     )
     return AgentOrchestrator(planner, proxy)
 
-@router.post("/agent/chat", response_model=AgentChatResponse)
+@router.post("/agent/chat", response_model=AgentChatResponse, dependencies=[Depends(api_rate_limiter)])
 async def chat(
     request: AgentChatRequest,
     orchestrator: AgentOrchestrator = Depends(get_orchestrator)

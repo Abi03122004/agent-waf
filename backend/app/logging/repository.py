@@ -43,6 +43,10 @@ class AuditRepository(ABC):
 
 class SQLiteAuditRepository(AuditRepository):
     def __init__(self, db_path: str) -> None:
+        import os
+        db_dir = os.path.dirname(db_path)
+        if db_dir:
+            os.makedirs(db_dir, exist_ok=True)
         self.db_path = db_path
         self._init_db()
 

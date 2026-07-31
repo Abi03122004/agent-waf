@@ -10,9 +10,45 @@ services:
       - "8000:8000"
     environment:
       - SHADOW_MODE=false
-      - DATABASE_PATH=agent_waf.db
+      - DATABASE_PATH=data/agent_waf.db
+      - ALLOWED_ORIGINS=http://localhost,http://localhost:80,http://127.0.0.1,http://127.0.0.1:80
+      - GROQ_API_KEY
+      - MODEL_NAME
+      - GROQ_BASE_URL
+      - API_RATE_LIMIT_ENABLED=true
+      - API_RATE_LIMIT_MAX=60
+      - API_RATE_LIMIT_WINDOW=60
     volumes:
-      - sqlite_data:/app
+      - sqlite_data:/app/data
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: agent_waf_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
 
 volumes:
   sqlite_data:

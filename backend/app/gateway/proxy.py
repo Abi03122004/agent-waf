@@ -85,7 +85,7 @@ class AgentWAFProxy:
                     ai_reason="Bypassed due to deterministic rule block.",
                     final_decision="BLOCK"
                 )
-                self.audit_repository.save(entry)
+                self._save_and_log_audit(entry)
 
                 # Record in metrics collector
                 metrics_collector.record_request(
@@ -125,7 +125,7 @@ class AgentWAFProxy:
                     ai_reason="Bypassed due to deterministic rule block (Shadow Mode).",
                     final_decision="SHADOW_BLOCK"
                 )
-                self.audit_repository.save(entry)
+                self._save_and_log_audit(entry)
 
                 metrics_collector.record_request(
                     allowed=True,
@@ -200,7 +200,7 @@ class AgentWAFProxy:
                 ai_reason=ai_reason,
                 final_decision=ai_decision
             )
-            self.audit_repository.save(entry)
+            self._save_and_log_audit(entry)
 
             # Record in metrics
             metrics_collector.record_request(
@@ -240,7 +240,7 @@ class AgentWAFProxy:
             ai_reason=ai_reason,
             final_decision=ai_decision if not would_block else "BLOCK"
         )
-        self.audit_repository.save(entry)
+        self._save_and_log_audit(entry)
 
         # Update metrics collector
         metrics_collector.record_request(
@@ -262,3 +262,24 @@ class AgentWAFProxy:
                 loop.create_task(event_publisher.publish(entry.dict()))
         except Exception:
             pass
+
+    def _save_and_log_audit(self, entry: AuditLogEntry) -> None:
+        # Save to database repository
+        self.audit_repository.save(entry)
+        
+        # Emit structured JSON audit log to stdout/stderr
+        audit_dict = {
+            "timestamp": entry.timestamp,
+            "request_id": entry.request_id,
+            "agent_id": entry.agent_id,
+            "session_id": entry.session_id,
+            "tool": entry.tool,
+            "decision": "blocked" if entry.blocked else "allowed",
+            "would_block": entry.would_block,
+            "rule_triggered": entry.rule_triggered,
+            "reason": entry.reason,
+            "execution_time_ms": entry.execution_time_ms,
+            "ai_risk_score": entry.ai_risk_score,
+            "final_decision": entry.final_decision
+        }
+        logger.info(json.dumps(audit_dict))

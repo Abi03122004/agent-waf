@@ -10,7 +10,7 @@ class GeminiService:
     def __init__(self) -> None:
         self.api_key = settings.GROQ_API_KEY
         self.model = settings.MODEL_NAME
-        self.base_url = "https://api.groq.com/openai/v1/chat/completions"
+        self.base_url = settings.GROQ_BASE_URL
 
     def _query(self, system_instruction: str, prompt: str) -> Optional[Dict[str, Any]]:
         if not self.api_key:

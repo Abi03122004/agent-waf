@@ -6,8 +6,8 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 import { getMetrics, getAuditLogs, getRules, reloadRules, resetWafLogs } from '../services/api';
 import wsManager from '../services/websocket';
 
-const COLOR_ALLOWED = '#a1a1aa';
-const COLOR_BLOCKED = '#27272a';
+const COLOR_ALLOWED = '#10b981';
+const COLOR_BLOCKED = '#ef4444';
 
 export const DashboardPage = () => {
   const [metrics, setMetrics] = useState({
@@ -150,7 +150,7 @@ export const DashboardPage = () => {
   }));
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+    <div className="app-container py-6 space-y-6">
       {/* Header & Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -192,8 +192,8 @@ export const DashboardPage = () => {
       </div>
 
       {/* System Health Status Bar */}
-      <div className="clean-card p-4 flex flex-wrap items-center justify-between gap-4 text-xs font-mono">
-        <div className="flex items-center space-x-6">
+      <div className="clean-card p-4 text-xs font-mono">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
           <span className="text-slate-400 uppercase font-semibold">System Readiness:</span>
           <div className="flex items-center space-x-2">
             <Server className="w-4 h-4 text-slate-300" />
@@ -215,15 +215,14 @@ export const DashboardPage = () => {
             <span className="text-slate-300">Policy Engine:</span>
             <span className="text-slate-100 font-bold">🟢 Active</span>
           </div>
-        </div>
-
-        <div className="flex items-center space-x-2 border-l border-slate-700/40 pl-4">
-          <span className="text-slate-400 uppercase font-semibold">Shadow Mode:</span>
-          <span
-            className={`clean-badge px-3 py-1 font-bold text-[10px] text-slate-300`}
-          >
-            {shadowMode ? 'ON (Log Only)' : 'OFF (Enforce Block)'}
-          </span>
+          <div className="flex items-center space-x-2">
+            <span className="text-slate-400 uppercase font-semibold">Shadow Mode:</span>
+            <span
+              className={`clean-badge px-3 py-1 font-bold text-[10px] text-slate-300`}
+            >
+              {shadowMode ? 'ON (Log Only)' : 'OFF (Enforce Block)'}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -414,8 +413,8 @@ export const DashboardPage = () => {
             Real-Time Audit Log Feed
           </h3>
 
-          <div className="clean-input-box flex items-center px-3 py-1.5 w-64">
-            <Search className="w-3.5 h-3.5 text-slate-400 mr-2" />
+          <div className="clean-input-box flex items-center px-3 py-1.5 w-full sm:w-64">
+            <Search className="w-3.5 h-3.5 text-slate-400 mr-2 flex-shrink-0" />
             <input
               type="text"
               value={searchTerm}
@@ -426,7 +425,7 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        <div className="clean-card bg-opacity-25 bg-slate-950/20 p-2 overflow-x-auto border-slate-700/20">
+        <div className="clean-card bg-opacity-25 bg-slate-950/20 p-2 overflow-x-auto border-slate-700/20 audit-table-wrap">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-slate-700/40 text-slate-400 font-semibold uppercase tracking-wider">
@@ -455,23 +454,23 @@ export const DashboardPage = () => {
                         {JSON.stringify(log.parameters)}
                       </div>
                     </td>
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-1.5 font-sans">
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-1.5 font-sans flex-wrap">
                         <span className={`clean-badge px-2 py-0.5 text-[9px] font-bold ${
-                          log.ai_risk_score === 'HIGH' ? 'text-black bg-white border border-black' : 'text-slate-400'
+                          log.ai_risk_score === 'HIGH' ? 'text-rose-400 border-rose-800/40 bg-rose-950/40' : 'text-slate-400'
                         }`}>
                           {log.ai_risk_score || 'LOW'}
                         </span>
                         {log.blocked ? (
-                          <span className="clean-badge px-2 py-0.5 text-black border border-black bg-white text-[9px] font-bold">
+                          <span className="clean-badge px-2 py-0.5 text-rose-400 border border-rose-800/40 bg-rose-950/40 text-[9px] font-bold">
                             BLOCKED
                           </span>
                         ) : log.would_block ? (
-                          <span className="clean-badge px-2 py-0.5 text-slate-400 text-[9px] font-bold">
+                          <span className="clean-badge px-2 py-0.5 text-amber-400 border border-amber-800/40 bg-amber-950/40 text-[9px] font-bold">
                             SHADOW
                           </span>
                         ) : (
-                          <span className="clean-badge px-2 py-0.5 text-slate-300 text-[9px] font-bold">
+                          <span className="clean-badge px-2 py-0.5 text-emerald-400 border border-emerald-800/40 bg-emerald-950/40 text-[9px] font-bold">
                             ALLOWED
                           </span>
                         )}

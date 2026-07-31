@@ -81,12 +81,76 @@ npm run dev
 python -m pytest backend/tests
 ```
 
+## 🐳 Docker Deployment
+
+To spin up the entire production-ready full stack environment (including the FastAPI backend, static React dashboard served via Nginx with security headers, and the reverse proxy) run:
+
+```bash
+docker compose up --build -d
+```
+
+- **React Dashboard & Chat Agent UI**: Access directly at `http://localhost/` (Port 80).
+- **FastAPI OpenAPI Swagger**: Access directly at `http://localhost:8000/docs`.
+
 ---
 
-## 🐳 Docker Deployment
+## ☁️ AWS EC2 Production Deployment Guide
+
+### 1. Prerequisites (Ubuntu 22.04 / 24.04 LTS)
+Log into your AWS Ubuntu EC2 instance and install Docker and Docker Compose:
 ```bash
-docker-compose up --build
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y docker.io
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+# Log out and log back in to apply docker group membership
 ```
+
+### 2. Project Setup
+Clone the repository and copy the example environment configuration file to `.env`:
+```bash
+git clone https://github.com/Abi03122004/agent-waf.git
+cd agent-waf
+cp .env.example .env
+```
+
+### 3. Configuration
+Edit the `.env` file to provide your production credentials:
+```bash
+nano .env
+```
+Provide the following values:
+* `GROQ_API_KEY`: Your active Groq API Key.
+* `ALLOWED_ORIGINS`: Set to your EC2 domain/IP (e.g. `http://your-ec2-domain.com,http://your-ec2-ip`).
+
+### 4. Running the Application
+Start the containers in daemon mode:
+```bash
+docker compose up --build -d
+```
+Docker will pull Node and Nginx base images, build the React frontend, compile the FastAPI backend, run health checks, and start the system. Nginx will bind to port 80 of your EC2 instance. Ensure your EC2 Security Group allows inbound HTTP traffic on port 80.
+
+### 5. Updating the Application
+To update the application after code changes are pushed to git:
+```bash
+git pull origin main
+docker compose up --build -d
+```
+This pulls changes and incrementally rebuilds only the modified layers without losing SQLite audit database records (persisted via the external `sqlite_data` volume).
+
+### 6. Automated CI/CD (GitHub Actions)
+For production environments, automate deployments with a GitHub Actions workflow:
+1. Store EC2 SSH keys (`EC2_SSH_KEY`), Host (`EC2_HOST`), Username (`EC2_USERNAME`), and your production `.env` contents in GitHub Repository Secrets.
+2. Create a workflow `.github/workflows/deploy.yml` that:
+   - Triggers on push to `main`.
+   - SSHs into the EC2 instance.
+   - Runs `git pull origin main`.
+   - Re-applies the environment config.
+   - Rebuilds and restarts the services: `docker compose up --build -d`.
+
+### 7. Production Database Recommendation
+> [!NOTE]
+> This application currently uses **SQLite** for demo simplicity and local auditing. For large-scale production workloads, it is highly recommended to migrate the storage layer to a containerized or managed relational database like **PostgreSQL** (e.g., AWS RDS PostgreSQL) to support high concurrency, automated snapshots, and scaling.
 
 ---
 
@@ -106,4 +170,4 @@ docker-compose up --build
 ---
 
 ## 🛡️ Enterprise Confidentiality
-* Developed for **Aivar Innovations**.
+* Developed for **Agent WAF Security System**.

@@ -9,13 +9,14 @@ class WafWebSocketManager {
   }
 
   getUrl() {
+    if (import.meta.env.VITE_WS_URL) {
+      return import.meta.env.VITE_WS_URL;
+    }
     if (typeof window !== 'undefined') {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      if (window.location.port === '5173') {
-        return `${protocol}//${window.location.host}/dashboard/ws`;
-      }
+      return `${protocol}//${window.location.host}/dashboard/ws`;
     }
-    return 'ws://127.0.0.1:8001/dashboard/ws';
+    return 'ws://127.0.0.1:8000/dashboard/ws';
   }
 
   connect() {

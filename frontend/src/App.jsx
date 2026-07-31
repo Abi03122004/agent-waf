@@ -9,7 +9,7 @@ export function App() {
   return (
     <ThemeProvider>
       <Router>
-        <div className="min-h-screen bg-slate-950 text-slate-100 font-sans transition-colors duration-200">
+        <div className="min-h-screen bg-slate-950 text-slate-100 font-sans transition-colors duration-200" style={{ overflowX: 'hidden', width: '100%' }}>
           <Navbar />
           <main className="pb-12">
             <Routes>
