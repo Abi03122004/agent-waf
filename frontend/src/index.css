@@ -37,13 +37,10 @@ html:not(.dark) {
   --text-dim: #71717a;
 }
 
-body, input, button, select, textarea, table, td, th {
-  font-family: Arial, Helvetica, sans-serif;
-}
-
 body {
   background-color: var(--clean-bg);
   color: var(--text-main);
+  font-family: Arial, Helvetica, sans-serif;
   min-height: 100vh;
   line-height: 1.5;
   transition: background-color 0.2s ease, color 0.2s ease;

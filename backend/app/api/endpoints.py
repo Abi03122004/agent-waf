@@ -18,32 +18,55 @@ from app.policy.engine import PolicyEngine
 from app.logging.repository import SQLiteAuditRepository
 from app.logging.publisher import event_publisher
 from app.logging.metrics import metrics_collector
+from app.database.schema import init_banking_schema
 
 # WAF Security Rules
 from app.rules.rate_limit import RateLimitRule
 from app.rules.parameter_validation import ParameterValidationRule
 from app.rules.data_scope import DataScopeRule
 from app.rules.sequence import SequenceRule
+from app.core.policy_loader import policy_loader
+from app.tools.banking import TransferMoneyTool, CheckBalanceTool, GetTransactionHistoryTool
 
 router = APIRouter()
 
 # Structured Logger
 logger = logging.getLogger("agent_waf")
 
-# Instantiating the SQLite Repository and Policy Engine
+# Instantiating the SQLite Repository, seeding banking schema, and Policy Engine
 audit_repo = SQLiteAuditRepository(settings.DATABASE_PATH)
+init_banking_schema()
 policy_engine = PolicyEngine()
 
 def init_rules(engine: PolicyEngine) -> None:
     # Clear rules list to prevent duplicates on reload
     engine.rules = []
     
+    # Reload policy data
+    policy_loader.load()
+    
+    # Get config parameters
+    rate_limit_cfg = policy_loader.get("rate_limit", {"max_calls": 5, "window_seconds": 60})
+    param_validation_cfg = policy_loader.get("parameter_validation", {
+        "max_param_size": 1000,
+        "blocked_keywords": ["delete", "remove", "rm", "format", "drop database", "kill"]
+    })
+    sequence_cfg = policy_loader.get("sequence", {"dependencies": {"file_reader": ["search"]}})
+    
     # Register rules in the exact order requested
-    engine.register_rule(RateLimitRule(max_calls=5, window_seconds=60))
-    engine.register_rule(ParameterValidationRule(max_param_size=1000))
+    engine.register_rule(RateLimitRule(
+        max_calls=rate_limit_cfg.get("max_calls", 5),
+        window_seconds=rate_limit_cfg.get("window_seconds", 60)
+    ))
+    engine.register_rule(ParameterValidationRule(
+        max_param_size=param_validation_cfg.get("max_param_size", 1000),
+        blocked_keywords=param_validation_cfg.get("blocked_keywords")
+    ))
     engine.register_rule(DataScopeRule())
-    engine.register_rule(SequenceRule(dependencies={"file_reader": ["search"]}))
-    logger.info("WAF Rules initialized.")
+    engine.register_rule(SequenceRule(
+        dependencies=sequence_cfg.get("dependencies", {"file_reader": ["search"]})
+    ))
+    logger.info("WAF Rules initialized dynamically from policy file.")
 
 # Initial Rules Registration
 init_rules(policy_engine)
@@ -56,6 +79,12 @@ def get_registry() -> ToolRegistry:
         default_registry.register(FileTool(sample_data_dir=settings.SAMPLE_DATA_DIR))
     if not default_registry.get_tool("calculator"):
         default_registry.register(CalculatorTool())
+    if not default_registry.get_tool("transfer_money"):
+        default_registry.register(TransferMoneyTool())
+    if not default_registry.get_tool("check_balance"):
+        default_registry.register(CheckBalanceTool())
+    if not default_registry.get_tool("get_transaction_history"):
+        default_registry.register(GetTransactionHistoryTool())
     return default_registry
 
 def get_orchestrator(registry: ToolRegistry = Depends(get_registry)) -> AgentOrchestrator:
@@ -123,6 +152,17 @@ async def reload_rules():
     """POST /rules/reload triggers a reload of the rule engine registration."""
     init_rules(policy_engine)
     return {"status": "success", "message": "WAF rules successfully reloaded."}
+
+@router.delete("/agent/logs/reset")
+async def reset_logs():
+    """DELETE /logs/reset deletes all audit logs and resets in-memory metrics."""
+    try:
+        audit_repo.clear_all()
+        metrics_collector.reset()
+        return {"status": "success", "message": "All WAF logs and metrics successfully reset."}
+    except Exception as e:
+        logger.error("Error resetting WAF logs: %s", str(e))
+        return {"status": "error", "message": f"Failed to reset logs: {str(e)}"}
 
 @router.websocket("/dashboard/ws")
 async def websocket_endpoint(websocket: WebSocket):

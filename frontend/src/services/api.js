@@ -40,10 +40,16 @@ export const reloadRules = async () => {
   return response.data;
 };
 
+export const resetWafLogs = async () => {
+  const response = await client.delete('/agent/logs/reset');
+  return response.data;
+};
+
 export default {
   sendAgentChat,
   getMetrics,
   getAuditLogs,
   getRules,
   reloadRules,
+  resetWafLogs,
 };

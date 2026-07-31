@@ -70,6 +70,11 @@ class ToolInvocation(BaseModel):
         description="Resources the agent is permitted to access"
     )
 
+    user_prompt: Optional[str] = Field(
+        default=None,
+        description="The raw user query or prompt"
+    )
+
     timestamp: datetime = Field(
         default_factory=datetime.utcnow,
         description="Time when the tool invocation was created"
@@ -164,8 +169,20 @@ class AuditLogEntry(BaseModel):
 
     blocked: bool
 
+    would_block: bool = False
+
     rule_name: Optional[str] = None
 
     reason: Optional[str] = None
 
     execution_time_ms: float = 0.0
+
+    user_prompt: Optional[str] = None
+
+    rule_result: Optional[str] = None
+
+    ai_risk_score: Optional[str] = None
+
+    ai_reason: Optional[str] = None
+
+    final_decision: Optional[str] = None

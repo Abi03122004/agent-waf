@@ -1,0 +1,35 @@
+{
+  "allowed_tools": [
+    "search",
+    "file_reader",
+    "calculator",
+    "transfer_money",
+    "check_balance",
+    "get_transaction_history"
+  ],
+  "rate_limit": {
+    "max_calls": 5,
+    "window_seconds": 60
+  },
+  "parameter_validation": {
+    "max_param_size": 1000,
+    "blocked_keywords": [
+      "delete",
+      "remove",
+      "rm",
+      "format",
+      "drop database",
+      "kill"
+    ]
+  },
+  "data_scope": {
+    "allowed_data_scope": "sample_data/"
+  },
+  "sequence": {
+    "dependencies": {
+      "file_reader": [
+        "search"
+      ]
+    }
+  }
+}

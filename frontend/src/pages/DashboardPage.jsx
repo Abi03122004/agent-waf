@@ -3,7 +3,7 @@ import {
   ShieldCheck, ShieldX, Activity, RefreshCw, Search, Layers, Clock, Terminal, Server, Database, Radio, Cpu, BarChart2, ShieldAlert
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
-import { getMetrics, getAuditLogs, getRules, reloadRules } from '../services/api';
+import { getMetrics, getAuditLogs, getRules, reloadRules, resetWafLogs } from '../services/api';
 import wsManager from '../services/websocket';
 
 const COLOR_ALLOWED = '#a1a1aa';
@@ -23,8 +23,32 @@ export const DashboardPage = () => {
   const [rules, setRules] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [reloading, setReloading] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [shadowMode, setShadowMode] = useState(false);
   const [showArchModal, setShowArchModal] = useState(false);
+
+  const handleResetLogs = async () => {
+    if (!window.confirm("Are you sure you want to clear all WAF logs and reset metrics?")) {
+      return;
+    }
+    setResetting(true);
+    try {
+      await resetWafLogs();
+      setAuditLogs([]);
+      setMetrics({
+        total_requests: 0,
+        allowed_requests: 0,
+        blocked_requests: 0,
+        requests_per_minute: 0,
+        rule_violations: {},
+        most_triggered_rule: 'None',
+      });
+    } catch (err) {
+      console.error('Failed to reset WAF logs:', err);
+    } finally {
+      setResetting(false);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -82,11 +106,36 @@ export const DashboardPage = () => {
 
   const filteredLogs = auditLogs.filter(
     (log) =>
-      log.tool.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (log.tool && log.tool.toLowerCase().includes(searchTerm.toLowerCase())) ||
       log.request_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (log.rule_triggered && log.rule_triggered.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (log.reason && log.reason.toLowerCase().includes(searchTerm.toLowerCase()))
+      (log.reason && log.reason.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (log.user_prompt && log.user_prompt.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  const aiDecisions = { ALLOW: 0, BLOCK: 0, REVIEW: 0 };
+  const aiRisks = { LOW: 0, MEDIUM: 0, HIGH: 0 };
+  let sqliCount = 0;
+  let promptInjCount = 0;
+
+  auditLogs.forEach((log) => {
+    const decision = log.final_decision || "ALLOW";
+    if (decision in aiDecisions) {
+      aiDecisions[decision]++;
+    }
+    const risk = log.ai_risk_score || "LOW";
+    if (risk in aiRisks) {
+      aiRisks[risk]++;
+    }
+    const reason = (log.reason || "").toLowerCase();
+    const parameters = JSON.stringify(log.parameters).toLowerCase();
+    if (reason.includes("sql") || parameters.includes("drop table") || parameters.includes("union select") || parameters.includes("delete from")) {
+      sqliCount++;
+    }
+    if (reason.includes("prompt injection") || parameters.includes("ignore previous instructions") || parameters.includes("reveal system prompt")) {
+      promptInjCount++;
+    }
+  });
 
   const latestRequest = auditLogs[0];
 
@@ -107,7 +156,7 @@ export const DashboardPage = () => {
         <div>
           <h1 className="text-2xl font-extrabold text-slate-100 tracking-tight flex items-center gap-3">
             Agent WAF Control Center
-            <span className="clean-badge px-3 py-1 text-emerald-400 text-xs font-mono">
+            <span className="clean-badge px-3 py-1 text-slate-100 text-xs font-mono">
               Live Protection
             </span>
           </h1>
@@ -126,10 +175,18 @@ export const DashboardPage = () => {
           <button
             onClick={handleReloadRules}
             disabled={reloading}
-            className="clean-btn px-4 py-2 text-cyan-400 text-xs font-semibold flex items-center space-x-2"
+            className="clean-btn px-4 py-2 text-slate-100 text-xs font-semibold flex items-center space-x-2"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${reloading ? 'animate-spin' : ''}`} />
             <span>Reload Rules</span>
+          </button>
+          <button
+            onClick={handleResetLogs}
+            disabled={resetting}
+            className="clean-btn px-4 py-2 text-slate-100 text-xs font-semibold flex items-center space-x-2 border-red-900/50 hover:bg-red-950/20"
+          >
+            <ShieldAlert className="w-3.5 h-3.5" />
+            <span>{resetting ? 'Resetting...' : 'Reset Logs'}</span>
           </button>
         </div>
       </div>
@@ -139,33 +196,31 @@ export const DashboardPage = () => {
         <div className="flex items-center space-x-6">
           <span className="text-slate-400 uppercase font-semibold">System Readiness:</span>
           <div className="flex items-center space-x-2">
-            <Server className="w-4 h-4 text-emerald-400" />
+            <Server className="w-4 h-4 text-slate-300" />
             <span className="text-slate-300">Backend:</span>
-            <span className="text-emerald-400 font-bold">🟢 Operational</span>
+            <span className="text-slate-100 font-bold">🟢 Operational</span>
           </div>
           <div className="flex items-center space-x-2">
-            <Database className="w-4 h-4 text-emerald-400" />
+            <Database className="w-4 h-4 text-slate-300" />
             <span className="text-slate-300">SQLite DB:</span>
-            <span className="text-emerald-400 font-bold">🟢 Connected</span>
+            <span className="text-slate-100 font-bold">🟢 Connected</span>
           </div>
           <div className="flex items-center space-x-2">
-            <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
+            <Radio className="w-4 h-4 text-slate-300 animate-pulse" />
             <span className="text-slate-300">WebSocket:</span>
-            <span className="text-emerald-400 font-bold">🟢 Streaming</span>
+            <span className="text-slate-100 font-bold">🟢 Streaming</span>
           </div>
           <div className="flex items-center space-x-2">
-            <Cpu className="w-4 h-4 text-emerald-400" />
+            <Cpu className="w-4 h-4 text-slate-300" />
             <span className="text-slate-300">Policy Engine:</span>
-            <span className="text-emerald-400 font-bold">🟢 Active</span>
+            <span className="text-slate-100 font-bold">🟢 Active</span>
           </div>
         </div>
 
         <div className="flex items-center space-x-2 border-l border-slate-700/40 pl-4">
           <span className="text-slate-400 uppercase font-semibold">Shadow Mode:</span>
           <span
-            className={`clean-badge px-3 py-1 font-bold text-[10px] ${
-              shadowMode ? 'text-amber-400' : 'text-emerald-400'
-            }`}
+            className={`clean-badge px-3 py-1 font-bold text-[10px] text-slate-300`}
           >
             {shadowMode ? 'ON (Log Only)' : 'OFF (Enforce Block)'}
           </span>
@@ -179,7 +234,7 @@ export const DashboardPage = () => {
             <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Requests</span>
             <div className="text-3xl font-black text-slate-100 mt-1">{metrics.total_requests}</div>
           </div>
-          <div className="clean-badge p-3 text-blue-400">
+          <div className="clean-badge p-3 text-slate-300">
             <Activity className="w-5 h-5" />
           </div>
         </div>
@@ -187,9 +242,9 @@ export const DashboardPage = () => {
         <div className="clean-card p-5 flex items-center justify-between">
           <div>
             <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Allowed Calls</span>
-            <div className="text-3xl font-black text-emerald-400 mt-1">{metrics.allowed_requests}</div>
+            <div className="text-3xl font-black text-slate-200 mt-1">{metrics.allowed_requests}</div>
           </div>
-          <div className="clean-badge p-3 text-emerald-400">
+          <div className="clean-badge p-3 text-slate-300">
             <ShieldCheck className="w-5 h-5" />
           </div>
         </div>
@@ -197,9 +252,9 @@ export const DashboardPage = () => {
         <div className="clean-card p-5 flex items-center justify-between">
           <div>
             <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Blocked Events</span>
-            <div className="text-3xl font-black text-rose-400 mt-1">{metrics.blocked_requests}</div>
+            <div className="text-3xl font-black text-slate-300 mt-1">{metrics.blocked_requests}</div>
           </div>
-          <div className="clean-badge p-3 text-rose-400">
+          <div className="clean-badge p-3 text-slate-300">
             <ShieldX className="w-5 h-5" />
           </div>
         </div>
@@ -207,10 +262,53 @@ export const DashboardPage = () => {
         <div className="clean-card p-5 flex items-center justify-between">
           <div>
             <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Velocity (RPM)</span>
-            <div className="text-3xl font-black text-cyan-400 mt-1">{metrics.requests_per_minute}</div>
+            <div className="text-3xl font-black text-slate-100 mt-1">{metrics.requests_per_minute}</div>
           </div>
-          <div className="clean-badge p-3 text-cyan-400">
+          <div className="clean-badge p-3 text-slate-300">
             <Clock className="w-5 h-5" />
+          </div>
+        </div>
+      </div>
+
+      {/* AI WAF Security Metrics Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="clean-card p-5 flex items-center justify-between">
+          <div>
+            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">AI Allowed Decisions</span>
+            <div className="text-3xl font-black text-slate-100 mt-1">{aiDecisions.ALLOW}</div>
+          </div>
+          <div className="clean-badge p-3 text-slate-400">
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div className="clean-card p-5 flex items-center justify-between">
+          <div>
+            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">AI Block/Review Decisions</span>
+            <div className="text-3xl font-black text-slate-100 mt-1">{aiDecisions.BLOCK + aiDecisions.REVIEW}</div>
+          </div>
+          <div className="clean-badge p-3 text-slate-400">
+            <ShieldX className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div className="clean-card p-5 flex items-center justify-between">
+          <div>
+            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">AI High Risk Alerts</span>
+            <div className="text-3xl font-black text-slate-100 mt-1">{aiRisks.HIGH}</div>
+          </div>
+          <div className="clean-badge p-3 text-slate-400">
+            <ShieldAlert className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div className="clean-card p-5 flex items-center justify-between">
+          <div>
+            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Injection Detections</span>
+            <div className="text-3xl font-black text-slate-100 mt-1">{sqliCount + promptInjCount}</div>
+          </div>
+          <div className="clean-badge p-3 text-slate-400">
+            <Terminal className="w-5 h-5" />
           </div>
         </div>
       </div>
@@ -333,10 +431,10 @@ export const DashboardPage = () => {
             <thead>
               <tr className="border-b border-slate-700/40 text-slate-400 font-semibold uppercase tracking-wider">
                 <th className="py-3 px-4">Timestamp</th>
-                <th className="py-3 px-4">Agent / Session</th>
-                <th className="py-3 px-4">Tool</th>
-                <th className="py-3 px-4">Disposition</th>
-                <th className="py-3 px-4">Triggered Rule</th>
+                <th className="py-3 px-4">User Prompt</th>
+                <th className="py-3 px-4">Tool Call (Params)</th>
+                <th className="py-3 px-4">AI Risk / Decision</th>
+                <th className="py-3 px-4">WAF Trigger</th>
                 <th className="py-3 px-4">Reason</th>
                 <th className="py-3 px-4 text-right">Latency</th>
               </tr>
@@ -348,28 +446,39 @@ export const DashboardPage = () => {
                     <td className="py-3 px-4 text-slate-400 whitespace-nowrap">
                       {new Date(log.timestamp).toLocaleTimeString()}
                     </td>
-                    <td className="py-3 px-4 text-slate-300">
-                      <div className="font-semibold text-slate-200">{log.agent_id}</div>
-                      <div className="text-[10px] text-slate-500">{log.session_id}</div>
+                    <td className="py-3 px-4 text-slate-200 font-medium max-w-xs truncate" title={log.user_prompt || '—'}>
+                      {log.user_prompt || '—'}
                     </td>
-                    <td className="py-3 px-4 text-cyan-400 font-bold">{log.tool}</td>
                     <td className="py-3 px-4">
-                      {log.blocked ? (
-                        <span className="clean-badge px-2.5 py-0.5 text-rose-400 text-[10px]">
-                          BLOCKED
-                        </span>
-                      ) : log.would_block ? (
-                        <span className="clean-badge px-2.5 py-0.5 text-amber-400 text-[10px]">
-                          SHADOW BLOCK
-                        </span>
-                      ) : (
-                        <span className="clean-badge px-2.5 py-0.5 text-emerald-400 text-[10px]">
-                          ALLOWED
-                        </span>
-                      )}
+                      <div className="font-bold text-slate-100">{log.tool}</div>
+                      <div className="text-[10px] text-slate-500 max-w-xs truncate" title={JSON.stringify(log.parameters)}>
+                        {JSON.stringify(log.parameters)}
+                      </div>
                     </td>
-                    <td className="py-3 px-4 text-purple-300 font-semibold">{log.rule_triggered || '—'}</td>
-                    <td className="py-3 px-4 text-slate-300 max-w-xs truncate" title={log.reason}>
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-1.5 font-sans">
+                        <span className={`clean-badge px-2 py-0.5 text-[9px] font-bold ${
+                          log.ai_risk_score === 'HIGH' ? 'text-black bg-white border border-black' : 'text-slate-400'
+                        }`}>
+                          {log.ai_risk_score || 'LOW'}
+                        </span>
+                        {log.blocked ? (
+                          <span className="clean-badge px-2 py-0.5 text-black border border-black bg-white text-[9px] font-bold">
+                            BLOCKED
+                          </span>
+                        ) : log.would_block ? (
+                          <span className="clean-badge px-2 py-0.5 text-slate-400 text-[9px] font-bold">
+                            SHADOW
+                          </span>
+                        ) : (
+                          <span className="clean-badge px-2 py-0.5 text-slate-300 text-[9px] font-bold">
+                            ALLOWED
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 text-slate-300 font-semibold">{log.rule_triggered || '—'}</td>
+                    <td className="py-3 px-4 text-slate-400 max-w-xs truncate" title={log.reason}>
                       {log.reason || 'Allowed'}
                     </td>
                     <td className="py-3 px-4 text-right text-slate-400">{log.execution_time_ms.toFixed(2)}ms</td>

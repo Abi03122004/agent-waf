@@ -3,6 +3,7 @@ from typing import Optional
 from app.tools.registry import ToolRegistry
 from app.schemas.agent import AgentContext
 from app.schemas.tool import ToolInvocation
+from app.services.gemini import gemini_service
 
 class AgentPlanner:
     def __init__(self, registry: ToolRegistry) -> None:
@@ -27,7 +28,8 @@ class AgentPlanner:
                 agent_id=context.agent_id,
                 session_id=context.session_id,
                 tool="search",
-                parameters={"query": query}
+                parameters={"query": query},
+                user_prompt=message
             )
 
         # 2. File Tool Route
@@ -41,7 +43,8 @@ class AgentPlanner:
                 agent_id=context.agent_id,
                 session_id=context.session_id,
                 tool="file_reader",
-                parameters={"filename": filename}
+                parameters={"filename": filename},
+                user_prompt=message
             )
 
         # 3. Calculator Tool Route
@@ -54,7 +57,8 @@ class AgentPlanner:
                 agent_id=context.agent_id,
                 session_id=context.session_id,
                 tool="calculator",
-                parameters={"expression": expression}
+                parameters={"expression": expression},
+                user_prompt=message
             )
 
         # Fallback Calculator Route (matches raw arithmetic calculations e.g. "45+20")
@@ -64,7 +68,8 @@ class AgentPlanner:
                 agent_id=context.agent_id,
                 session_id=context.session_id,
                 tool="calculator",
-                parameters={"expression": message}
+                parameters={"expression": message},
+                user_prompt=message
             )
 
         # 4. Destructive / Malicious Actions Route
@@ -75,7 +80,21 @@ class AgentPlanner:
                 agent_id=context.agent_id,
                 session_id=context.session_id,
                 tool="file_reader",
-                parameters={"filename": message}
+                parameters={"filename": message},
+                user_prompt=message
+            )
+
+        # 5. AI Banking Route via Gemini (run only if local utility regexes did not match)
+        banking_call = gemini_service.generate_banking_tool_call(message)
+        tool_name = banking_call.get("tool")
+        if tool_name and tool_name in ["transfer_money", "check_balance", "get_transaction_history"]:
+            return ToolInvocation(
+                request_id=context.request_id,
+                agent_id=context.agent_id,
+                session_id=context.session_id,
+                tool=tool_name,
+                parameters=banking_call.get("parameters", {}),
+                user_prompt=message
             )
 
         return None

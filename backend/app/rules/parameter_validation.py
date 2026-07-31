@@ -7,11 +7,19 @@ class ParameterValidationRule(BaseRule):
     """
     Validates parameters for security issues (SQLi, Prompt injection, path traversal, oversized fields).
     """
-    def __init__(self, max_param_size: int = 1000) -> None:
+    def __init__(
+        self,
+        max_param_size: int = 1000,
+        blocked_keywords: list = None,
+        sqli_patterns: list = None,
+        prompt_inj_patterns: list = None,
+        destructive_patterns: list = None
+    ) -> None:
         self.max_param_size = max_param_size
+        self.blocked_keywords = blocked_keywords or ["delete", "remove", "rm", "format", "drop database", "kill"]
         
         # Substring/regex matching patterns for SQL Injection (case-insensitive)
-        self.sqli_patterns = [
+        self.sqli_patterns = sqli_patterns or [
             r"(?i)\bdrop\s+table\b",
             r"(?i)\bdelete\s+from\b",
             r"(?i)\binsert\s+into\b",
@@ -21,7 +29,7 @@ class ParameterValidationRule(BaseRule):
         ]
         
         # Substring/regex matching patterns for Prompt Injection (case-insensitive)
-        self.prompt_inj_patterns = [
+        self.prompt_inj_patterns = prompt_inj_patterns or [
             r"(?i)\bignore\s+previous\s+instructions\b",
             r"(?i)\breveal\s+system\s+prompt\b",
             r"(?i)\bact\s+as\s+(?:a\s+)?developer\b",
@@ -30,7 +38,7 @@ class ParameterValidationRule(BaseRule):
         ]
 
         # Substring/regex matching patterns for Destructive File Operations (case-insensitive)
-        self.destructive_patterns = [
+        self.destructive_patterns = destructive_patterns or [
             r"(?i)\bdelete\s+(?:all\s+)?files?\b",
             r"(?i)\brm\s+-[a-z]*r[a-z]*\b",
             r"(?i)\bremove\s+(?:all\s+)?files?\b",
@@ -42,9 +50,15 @@ class ParameterValidationRule(BaseRule):
     def evaluate(self, invocation: ToolInvocation) -> Tuple[bool, str]:
         def validate_val(val: Any) -> Tuple[bool, str]:
             if isinstance(val, str):
+                lower_val = val.lower()
+                
+                # 0. Blocked Keywords check
+                for kw in self.blocked_keywords:
+                    if kw in lower_val:
+                        return False, f"Blocked keyword '{kw}' detected."
+
                 # 1. Path Traversal check
                 # Check for relative directory escapes and known locations
-                lower_val = val.lower()
                 if "../../../" in val or "..\\" in val or "/etc/passwd" in lower_val or "c:\\windows" in lower_val:
                     return False, "Path Traversal attempt detected."
 

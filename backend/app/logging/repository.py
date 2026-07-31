@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 import sqlite3
 import json
 from abc import ABC, abstractmethod
@@ -18,6 +19,11 @@ class AuditLogEntry(BaseModel):
     rule_triggered: Optional[str] = Field(default=None, description="Name of the rule triggered, if any")
     reason: Optional[str] = Field(default=None, description="Interception block reason message")
     execution_time_ms: float = Field(description="Time taken to execute request in milliseconds")
+    user_prompt: Optional[str] = Field(default=None, description="Raw user prompt query")
+    rule_result: Optional[str] = Field(default=None, description="Result summary of deterministic rule engine")
+    ai_risk_score: Optional[str] = Field(default=None, description="Risk level determined by AI WAF")
+    ai_reason: Optional[str] = Field(default=None, description="Detailed explanation from AI classifier")
+    final_decision: Optional[str] = Field(default=None, description="Final WAF disposition")
 
 class AuditRepository(ABC):
     @abstractmethod
@@ -30,11 +36,26 @@ class AuditRepository(ABC):
         """Fetch latest audit log entries up to limit."""
         pass
 
+    @abstractmethod
+    def clear_all(self) -> None:
+        """Clear all audit logs."""
+        pass
+
 class SQLiteAuditRepository(AuditRepository):
     def __init__(self, db_path: str) -> None:
         self.db_path = db_path
         self._init_db()
 
+    def clear_all(self) -> None:
+        with self._get_connection() as conn:
+            conn.execute("DELETE FROM audit_logs;")
+            try:
+                conn.execute("DELETE FROM sqlite_sequence WHERE name = 'audit_logs';")
+            except Exception:
+                pass
+            conn.commit()
+
+    @contextmanager
     def _get_connection(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path, timeout=30.0, check_same_thread=False)
         try:
@@ -42,7 +63,11 @@ class SQLiteAuditRepository(AuditRepository):
             conn.execute("PRAGMA synchronous=NORMAL;")
         except Exception:
             pass
-        return conn
+        conn.row_factory = sqlite3.Row
+        try:
+            yield conn
+        finally:
+            conn.close()
 
     def _init_db(self) -> None:
         with self._get_connection() as conn:
@@ -63,6 +88,21 @@ class SQLiteAuditRepository(AuditRepository):
                     execution_time_ms REAL NOT NULL
                 )
             """)
+            
+            # Dynamic migration: append new hybrid WAF columns if missing
+            new_columns = [
+                ("user_prompt", "TEXT"),
+                ("rule_result", "TEXT"),
+                ("ai_risk_score", "TEXT"),
+                ("ai_reason", "TEXT"),
+                ("final_decision", "TEXT")
+            ]
+            for col_name, col_type in new_columns:
+                try:
+                    conn.execute(f"ALTER TABLE audit_logs ADD COLUMN {col_name} {col_type};")
+                except sqlite3.OperationalError:
+                    # Column already exists, safe to ignore
+                    pass
             conn.commit()
 
     def save(self, entry: AuditLogEntry) -> None:
@@ -74,8 +114,9 @@ class SQLiteAuditRepository(AuditRepository):
                     INSERT INTO audit_logs (
                         timestamp, request_id, session_id, agent_id, tool,
                         parameters, allowed, blocked, would_block, rule_triggered,
-                        reason, execution_time_ms
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        reason, execution_time_ms, user_prompt, rule_result,
+                        ai_risk_score, ai_reason, final_decision
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         entry.timestamp,
@@ -89,7 +130,12 @@ class SQLiteAuditRepository(AuditRepository):
                         1 if entry.would_block else 0,
                         entry.rule_triggered,
                         entry.reason,
-                        entry.execution_time_ms
+                        entry.execution_time_ms,
+                        entry.user_prompt,
+                        entry.rule_result,
+                        entry.ai_risk_score,
+                        entry.ai_reason,
+                        entry.final_decision
                     )
                 )
                 conn.commit()
@@ -111,6 +157,29 @@ class SQLiteAuditRepository(AuditRepository):
                     params_dict = json.loads(row["parameters"])
                 except Exception:
                     params_dict = {}
+                
+                # Fetch row fields safely, falling back to None if not present (helps during migration transition)
+                user_prompt = None
+                rule_result = None
+                ai_risk = None
+                ai_reason = None
+                final_decision = None
+                
+                try: user_prompt = row["user_prompt"]
+                except Exception: pass
+                
+                try: rule_result = row["rule_result"]
+                except Exception: pass
+                
+                try: ai_risk = row["ai_risk_score"]
+                except Exception: pass
+                
+                try: ai_reason = row["ai_reason"]
+                except Exception: pass
+                
+                try: final_decision = row["final_decision"]
+                except Exception: pass
+
                 entries.append(
                     AuditLogEntry(
                         timestamp=row["timestamp"],
@@ -124,7 +193,12 @@ class SQLiteAuditRepository(AuditRepository):
                         would_block=bool(row["would_block"]),
                         rule_triggered=row["rule_triggered"],
                         reason=row["reason"],
-                        execution_time_ms=row["execution_time_ms"]
+                        execution_time_ms=row["execution_time_ms"],
+                        user_prompt=user_prompt,
+                        rule_result=rule_result,
+                        ai_risk_score=ai_risk,
+                        ai_reason=ai_reason,
+                        final_decision=final_decision
                     )
                 )
             return entries

@@ -53,5 +53,14 @@ class MetricsCollector:
                 "most_triggered_rule": most_triggered_rule
             }
 
+    def reset(self) -> None:
+        """Reset all metric counters to zero."""
+        with self._lock:
+            self.total_requests = 0
+            self.allowed_requests = 0
+            self.blocked_requests = 0
+            self.rule_violations.clear()
+            self.request_timestamps.clear()
+
 # Create a singleton global metrics collector
 metrics_collector = MetricsCollector()
