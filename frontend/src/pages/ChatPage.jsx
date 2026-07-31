@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Bot, User, Clock, Terminal, Sparkles, ShieldAlert, ShieldCheck, Zap, CornerDownLeft } from 'lucide-react';
+import { Send, Bot, User, Clock, Terminal, Sparkles, ShieldAlert, ShieldCheck, CornerDownLeft, RefreshCw } from 'lucide-react';
 import { sendAgentChat } from '../services/api';
 
 const ALLOWED_PROMPTS = [
@@ -127,38 +127,38 @@ export const ChatPage = () => {
   };
 
   return (
-    <div className="app-container py-3 space-y-4">
+    <div className="chat-page-container py-4">
 
-      {/* Main Responsive Chat Assistant Window */}
-      <div className="clean-card p-3 sm:p-5 flex flex-col chat-container-frame">
+      {/* Main Modern Elevated Chat Window (Reduced with 4cm margins on each side) */}
+      <div className="clean-card p-4 sm:p-6 flex flex-col chat-container-frame rounded-3xl">
         
-        {/* Chat Window Header Bar */}
-        <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-700/30 px-1">
-          <div className="flex items-center space-x-2.5">
-            <div className="clean-badge p-2 text-cyan-400">
-              <Bot className="w-4 h-4" />
+        {/* Modern Chat Window Header Bar */}
+        <div className="flex items-center justify-between pb-3.5 mb-3.5 border-b border-slate-700/30 px-1">
+          <div className="flex items-center space-x-3">
+            <div className="clean-badge p-2.5 text-cyan-400">
+              <Bot className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xs font-bold text-slate-100 tracking-wide flex items-center gap-2">
-                Agent WAF Banking Assistant
-                <span className="clean-badge px-2 py-0.5 text-[9px] text-emerald-400 font-mono">
-                  🟢 Live Security Proxy
+              <h2 className="text-xs sm:text-sm font-bold text-slate-100 tracking-wide flex items-center gap-2">
+                AI Banking Assistant
+                <span className="clean-badge px-2.5 py-0.5 text-[9px] text-emerald-400 font-mono">
+                  🟢 Agent WAF Active
                 </span>
               </h2>
-              <p className="text-[10px] text-slate-400">
-                Protected by Tier 1 (Deterministic) + Tier 2 (AI Risk Classifier) Engine
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                Zero-Trust Dual-Tier Security Proxy Interceptor
               </p>
             </div>
           </div>
 
           <div className="hidden sm:flex items-center space-x-2 text-[10px] text-slate-400 font-mono">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Zero-Trust Sandbox</span>
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <span>Sandbox Mode</span>
           </div>
         </div>
 
         {/* Scrollable Message History Area */}
-        <div className="clean-card bg-opacity-25 bg-slate-950/20 flex-1 p-3 sm:p-5 overflow-y-auto space-y-5 mb-3 scrollbar-thin flex flex-col">
+        <div className="clean-card bg-opacity-25 bg-slate-950/20 flex-1 p-3.5 sm:p-5 overflow-y-auto space-y-5 mb-4 scrollbar-thin flex flex-col rounded-2xl">
           {messages.map((msg) => (
             <div
               key={msg.id}
@@ -204,13 +204,13 @@ export const ChatPage = () => {
                 {msg.sender === 'agent' && (msg.toolUsed || msg.executionTime) && (
                   <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-500 font-mono pl-1">
                     {msg.toolUsed && (
-                      <span className="clean-badge px-2 py-0.5 text-cyan-400 space-x-1">
+                      <span className="clean-badge px-2.5 py-0.5 text-cyan-400 space-x-1">
                         <Terminal className="w-3 h-3" />
                         <span>Tool: {msg.toolUsed}</span>
                       </span>
                     )}
                     {msg.executionTime && (
-                      <span className="clean-badge px-2 py-0.5 text-slate-300 space-x-1">
+                      <span className="clean-badge px-2.5 py-0.5 text-slate-300 space-x-1">
                         <Clock className="w-3 h-3" />
                         <span>{msg.executionTime.toFixed(2)}ms</span>
                       </span>
@@ -232,7 +232,7 @@ export const ChatPage = () => {
               <div className="clean-badge p-2.5 text-cyan-400">
                 <Bot className="w-4 h-4 animate-spin" />
               </div>
-              <div className="clean-card bg-opacity-40 px-4 py-2 text-slate-400 text-xs flex items-center space-x-2">
+              <div className="clean-card bg-opacity-40 px-4 py-2 text-slate-400 text-xs flex items-center space-x-2 rounded-xl">
                 <Sparkles className="w-3.5 h-3.5 animate-pulse text-cyan-400" />
                 <span>WAF inspecting agent tool call...</span>
               </div>
@@ -243,12 +243,10 @@ export const ChatPage = () => {
         </div>
 
         {/* Suggested Quick Prompt Chips Container */}
-        <div className="mb-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block pl-1">
-              Interactive Test Prompts:
-            </span>
-          </div>
+        <div className="mb-3.5 space-y-2">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block pl-1">
+            Suggested Interactive Prompts:
+          </span>
           <div className="flex flex-wrap gap-1.5">
             {ALLOWED_PROMPTS.map((item, idx) => (
               <button
@@ -283,7 +281,7 @@ export const ChatPage = () => {
           }}
           className="flex items-center space-x-2 sm:space-x-3"
         >
-          <div className="clean-input-box flex-1 px-3 sm:px-4 py-1 flex items-center justify-between">
+          <div className="clean-input-box flex-1 px-4 py-1.5 flex items-center justify-between">
             <input
               type="text"
               value={input}
@@ -292,7 +290,7 @@ export const ChatPage = () => {
               disabled={loading}
               className="w-full bg-transparent text-xs text-slate-100 placeholder-slate-500 focus:outline-none py-2"
             />
-            <span className="hidden md:inline-flex items-center text-[10px] text-slate-500 font-mono pl-2">
+            <span className="hidden md:inline-flex items-center text-[10px] text-slate-500 font-mono pl-2 flex-shrink-0">
               <CornerDownLeft className="w-3 h-3 mr-1" /> Enter
             </span>
           </div>
@@ -300,7 +298,7 @@ export const ChatPage = () => {
           <button
             type="submit"
             disabled={loading || !input.trim()}
-            className="clean-btn px-4 py-3 text-slate-100 hover:text-white disabled:opacity-40 transition font-semibold text-xs flex items-center space-x-1.5"
+            className="clean-btn px-5 py-3 text-slate-100 hover:text-white disabled:opacity-40 transition font-semibold text-xs flex items-center space-x-1.5 rounded-2xl"
           >
             <span>Send</span>
             <Send className="w-3.5 h-3.5" />
