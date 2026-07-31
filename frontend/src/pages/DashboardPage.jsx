@@ -128,7 +128,7 @@ export const DashboardPage = () => {
       aiRisks[risk]++;
     }
     const reason = (log.reason || "").toLowerCase();
-    const parameters = JSON.stringify(log.parameters).toLowerCase();
+    const parameters = JSON.stringify(log.parameters || {}).toLowerCase();
     const userPrompt = (log.user_prompt || "").toLowerCase();
     
     if (reason.includes("sql") || parameters.includes("drop table") || parameters.includes("union select") || parameters.includes("delete from") || userPrompt.includes("drop table")) {
@@ -484,8 +484,8 @@ export const DashboardPage = () => {
                     </td>
                     <td className="py-3 px-4">
                       <div className="font-bold text-slate-100">{log.tool}</div>
-                      <div className="text-[10px] text-slate-500 max-w-xs truncate" title={JSON.stringify(log.parameters)}>
-                        {JSON.stringify(log.parameters)}
+                      <div className="text-[10px] text-slate-500 max-w-xs truncate" title={JSON.stringify(log.parameters || {})}>
+                        {JSON.stringify(log.parameters || {})}
                       </div>
                     </td>
                     <td className="py-3 px-4">
