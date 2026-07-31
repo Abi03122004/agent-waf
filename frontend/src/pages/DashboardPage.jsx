@@ -129,13 +129,27 @@ export const DashboardPage = () => {
     }
     const reason = (log.reason || "").toLowerCase();
     const parameters = JSON.stringify(log.parameters).toLowerCase();
-    if (reason.includes("sql") || parameters.includes("drop table") || parameters.includes("union select") || parameters.includes("delete from")) {
+    const userPrompt = (log.user_prompt || "").toLowerCase();
+    
+    if (reason.includes("sql") || parameters.includes("drop table") || parameters.includes("union select") || parameters.includes("delete from") || userPrompt.includes("drop table")) {
       sqliCount++;
     }
-    if (reason.includes("prompt injection") || parameters.includes("ignore previous instructions") || parameters.includes("reveal system prompt")) {
+    if (reason.includes("prompt injection") || parameters.includes("ignore previous instructions") || userPrompt.includes("ignore previous instructions") || userPrompt.includes("reveal system")) {
       promptInjCount++;
     }
   });
+
+  let pathTraversalCount = 0;
+  let totalLatency = 0;
+  auditLogs.forEach((log) => {
+    const userPrompt = (log.user_prompt || "").toLowerCase();
+    const reason = (log.reason || "").toLowerCase();
+    if (userPrompt.includes("../") || reason.includes("datascope") || reason.includes("permissionerror") || reason.includes("path")) {
+      pathTraversalCount++;
+    }
+    totalLatency += (log.execution_time_ms || 0);
+  });
+  const avgLatency = auditLogs.length > 0 ? (totalLatency / auditLogs.length) : 0;
 
   const latestRequest = auditLogs[0];
 
@@ -227,44 +241,64 @@ export const DashboardPage = () => {
       </div>
 
       {/* KPI Metrics Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="clean-card p-5 flex items-center justify-between">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <div className="clean-card p-4 flex items-center justify-between border-rose-800/40 bg-rose-950/40">
           <div>
-            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Requests</span>
-            <div className="text-3xl font-black text-slate-100 mt-1">{metrics.total_requests}</div>
+            <span className="text-[10px] font-bold text-rose-400 uppercase tracking-wider">Blocked Attacks</span>
+            <div className="text-2xl font-black text-rose-400 mt-1">{metrics.blocked_requests}</div>
           </div>
-          <div className="clean-badge p-3 text-slate-300">
-            <Activity className="w-5 h-5" />
+          <div className="clean-badge p-2.5 text-rose-400">
+            <ShieldX className="w-4 h-4" />
           </div>
         </div>
 
-        <div className="clean-card p-5 flex items-center justify-between">
+        <div className="clean-card p-4 flex items-center justify-between border-emerald-800/40 bg-emerald-950/40">
           <div>
-            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Allowed Calls</span>
-            <div className="text-3xl font-black text-slate-200 mt-1">{metrics.allowed_requests}</div>
+            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Allowed Requests</span>
+            <div className="text-2xl font-black text-emerald-400 mt-1">{metrics.allowed_requests}</div>
           </div>
-          <div className="clean-badge p-3 text-slate-300">
-            <ShieldCheck className="w-5 h-5" />
+          <div className="clean-badge p-2.5 text-emerald-400">
+            <ShieldCheck className="w-4 h-4" />
           </div>
         </div>
 
-        <div className="clean-card p-5 flex items-center justify-between">
+        <div className="clean-card p-4 flex items-center justify-between">
           <div>
-            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Blocked Events</span>
-            <div className="text-3xl font-black text-slate-300 mt-1">{metrics.blocked_requests}</div>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Prompt Injections</span>
+            <div className="text-2xl font-black text-slate-100 mt-1">{promptInjCount}</div>
           </div>
-          <div className="clean-badge p-3 text-slate-300">
-            <ShieldX className="w-5 h-5" />
+          <div className="clean-badge p-2.5 text-purple-400">
+            <Terminal className="w-4 h-4" />
           </div>
         </div>
 
-        <div className="clean-card p-5 flex items-center justify-between">
+        <div className="clean-card p-4 flex items-center justify-between">
           <div>
-            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Velocity (RPM)</span>
-            <div className="text-3xl font-black text-slate-100 mt-1">{metrics.requests_per_minute}</div>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">SQL Injections</span>
+            <div className="text-2xl font-black text-slate-100 mt-1">{sqliCount}</div>
           </div>
-          <div className="clean-badge p-3 text-slate-300">
-            <Clock className="w-5 h-5" />
+          <div className="clean-badge p-2.5 text-cyan-400">
+            <Database className="w-4 h-4" />
+          </div>
+        </div>
+
+        <div className="clean-card p-4 flex items-center justify-between">
+          <div>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Path Traversals</span>
+            <div className="text-2xl font-black text-slate-100 mt-1">{pathTraversalCount}</div>
+          </div>
+          <div className="clean-badge p-2.5 text-amber-400">
+            <Layers className="w-4 h-4" />
+          </div>
+        </div>
+
+        <div className="clean-card p-4 flex items-center justify-between">
+          <div>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Avg Latency</span>
+            <div className="text-2xl font-black text-slate-100 mt-1">{avgLatency.toFixed(1)} <span className="text-xs font-mono font-normal">ms</span></div>
+          </div>
+          <div className="clean-badge p-2.5 text-slate-300">
+            <Clock className="w-4 h-4" />
           </div>
         </div>
       </div>

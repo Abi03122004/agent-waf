@@ -19,3 +19,7 @@ class AgentChatResponse(BaseModel):
     tool_used: Optional[str] = Field(default=None, description="The name of the tool executed, or null if no tool was run")
     response: str = Field(description="Text output result from the agent/tool execution")
     execution_time_ms: float = Field(description="Total time taken to execute request in milliseconds")
+    is_blocked: bool = Field(default=False, description="Whether the request was intercepted and blocked by WAF")
+    rule_triggered: Optional[str] = Field(default=None, description="Name of the security rule triggered if blocked")
+    risk_score: Optional[str] = Field(default="LOW", description="AI Security risk classification score")
+    waf_reason: Optional[str] = Field(default=None, description="Human-readable WAF decision explanation")
