@@ -35,10 +35,7 @@ class AgentOrchestrator:
         """
 
         tool_used: Optional[str] = None
-        is_blocked: bool = False
-        rule_triggered: Optional[str] = None
-        risk_score: Optional[str] = "LOW"
-        waf_reason: Optional[str] = "Allowed by Agent WAF policy"
+        response_text: str = ""
 
         with execution_timer() as timer:
             try:
@@ -69,9 +66,6 @@ class AgentOrchestrator:
                             params=invocation.parameters,
                             result=str(tool_response.result)
                         )
-                        is_blocked = False
-                        waf_reason = "Allowed by Agent WAF policy"
-                        risk_score = "LOW"
                     else:
                         # WAF blocked or tool failed -> let LLM explain the block naturally
                         block_err = tool_response.error or "Tool execution failed."
@@ -80,26 +74,16 @@ class AgentOrchestrator:
                             tool=invocation.tool,
                             reason=block_err
                         )
-                        is_blocked = True
-                        rule_triggered = getattr(tool_response, 'block_reason', None) or "SecurityPolicyViolation"
-                        waf_reason = block_err
-                        risk_score = "HIGH"
                 else:
                     # No tool call was planned -> generate conversational natural response directly
                     response_text = gemini_service.generate_direct_response(context.message)
 
             except Exception as e:
                 response_text = f"An unexpected error occurred during execution: {str(e)}"
-                is_blocked = True
-                waf_reason = str(e)
 
         return AgentChatResponse(
             request_id=context.request_id,
             tool_used=tool_used,
             response=response_text,
             execution_time_ms=timer.elapsed_ms,
-            is_blocked=is_blocked,
-            rule_triggered=rule_triggered,
-            risk_score=risk_score,
-            waf_reason=waf_reason,
         )

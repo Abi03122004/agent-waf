@@ -15,7 +15,7 @@
   --clean-card: #121215;
   --clean-card-hover: #1c1c22;
   --clean-border: rgba(255, 255, 255, 0.12);
-  --clean-input: #0e0e12;
+  --clean-input: #09090b;
   --clean-btn: #121215;
   --clean-btn-hover: #1c1c22;
   
@@ -32,18 +32,17 @@
   --accent-indigo: #818cf8;
 
   --trans-subtle: rgba(255, 255, 255, 0.05);
-  --trans-card: rgba(255, 255, 255, 0.02);
+  --trans-card: rgba(255, 255, 255, 0.03);
   --code-bg: #000000;
   
-  --rose-bg: rgba(248, 113, 113, 0.1);
-  --rose-border: rgba(248, 113, 113, 0.3);
-  --emerald-bg: rgba(52, 211, 153, 0.1);
-  --emerald-border: rgba(52, 211, 153, 0.3);
-  --amber-bg: rgba(251, 191, 36, 0.1);
-  --amber-border: rgba(251, 191, 36, 0.3);
-
-  --chat-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.6);
-  --input-focus: rgba(56, 189, 248, 0.3);
+  --rose-bg: rgba(248, 113, 113, 0.12);
+  --rose-border: rgba(248, 113, 113, 0.35);
+  --emerald-bg: rgba(52, 211, 153, 0.12);
+  --emerald-border: rgba(52, 211, 153, 0.35);
+  --amber-bg: rgba(251, 191, 36, 0.12);
+  --amber-border: rgba(251, 191, 36, 0.35);
+  --blue-bg: rgba(96, 165, 250, 0.12);
+  --blue-border: rgba(96, 165, 250, 0.35);
 }
 
 /* Light Mode (when html does NOT have .dark class) */
@@ -78,9 +77,8 @@ html:not(.dark) {
   --emerald-border: rgba(5, 150, 105, 0.25);
   --amber-bg: rgba(217, 119, 6, 0.08);
   --amber-border: rgba(217, 119, 6, 0.25);
-
-  --chat-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.08);
-  --input-focus: rgba(2, 132, 199, 0.2);
+  --blue-bg: rgba(37, 99, 235, 0.08);
+  --blue-border: rgba(37, 99, 235, 0.25);
 }
 
 html, body, #root {
@@ -99,13 +97,12 @@ body {
 }
 
 /* ============================================================
-   Clean UI Core Elements
+   Clean UI Core Elements & Color-Coded Badges
    ============================================================ */
 .clean-card {
   background-color: var(--clean-card);
   border: 1px solid var(--clean-border);
-  border-radius: 1.25rem;
-  box-shadow: var(--chat-shadow);
+  border-radius: 0.75rem;
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
@@ -113,18 +110,17 @@ body {
   background-color: var(--clean-btn);
   border: 1px solid var(--clean-border);
   color: var(--text-main);
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
 }
 
 .clean-btn:hover:not(:disabled) {
   background-color: var(--clean-btn-hover);
-  border-color: var(--accent-cyan);
-  transform: translateY(-1px);
+  border-color: var(--clean-border);
 }
 
 .clean-btn:active:not(:disabled) {
@@ -146,67 +142,62 @@ body {
   flex-shrink: 0;
 }
 
+/* Enterprise Standard Status Color Badges */
+.badge-safe {
+  color: var(--accent-emerald);
+  background-color: var(--emerald-bg);
+  border: 1px solid var(--emerald-border);
+  font-weight: 700;
+}
+
+.badge-blocked {
+  color: var(--accent-rose);
+  background-color: var(--rose-bg);
+  border: 1px solid var(--rose-border);
+  font-weight: 700;
+}
+
+.badge-warning {
+  color: var(--accent-amber);
+  background-color: var(--amber-bg);
+  border: 1px solid var(--amber-border);
+  font-weight: 700;
+}
+
+.badge-info {
+  color: var(--accent-cyan);
+  background-color: var(--blue-bg);
+  border: 1px solid var(--blue-border);
+  font-weight: 700;
+}
+
 .clean-input-box {
   background-color: var(--clean-input);
   border: 1px solid var(--clean-border);
-  border-radius: 1rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.clean-input-box:focus-within {
-  border-color: var(--accent-cyan);
-  box-shadow: 0 0 0 3px var(--input-focus);
+  border-radius: 0.5rem;
 }
 
 /* ============================================================
-   Chat Responsive Frame & Page Container
+   Chat Responsive Frame & Card Layout
    ============================================================ */
-
-/* Reduced Chatbox width: 4cm padding on each side for desktop screens */
-.chat-page-container {
-  width: 100%;
-  margin-left: auto;
-  margin-right: auto;
-  padding-left: 1rem;
-  padding-right: 1rem;
-}
-
-@media (min-width: 1024px) {
-  .chat-page-container {
-    padding-left: 4cm;
-    padding-right: 4cm;
-  }
-}
-
-@media (min-width: 1400px) {
-  .chat-page-container {
-    padding-left: 5cm;
-    padding-right: 5cm;
-  }
-}
-
 .chat-container-frame {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 11rem);
-  min-height: 540px;
+  height: calc(100vh - 17rem);
+  min-height: 480px;
 }
 
 @media (max-height: 750px) {
   .chat-container-frame {
-    height: calc(100vh - 9rem);
-    min-height: 440px;
+    height: calc(100vh - 14rem);
+    min-height: 400px;
   }
 }
 
 @media (max-width: 767px) {
-  .chat-page-container {
-    padding-left: 0.75rem;
-    padding-right: 0.75rem;
-  }
   .chat-container-frame {
-    height: calc(100vh - 9.5rem);
-    min-height: 380px;
+    height: calc(100vh - 14rem);
+    min-height: 360px;
   }
 }
 
@@ -215,9 +206,9 @@ body {
   background-color: var(--clean-btn);
   border: 1px solid var(--clean-border);
   color: var(--text-main);
-  border-radius: 9999px;
+  border-radius: 0.5rem;
   font-size: 0.75rem;
-  padding: 0.375rem 0.85rem;
+  padding: 0.5rem 0.75rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -228,18 +219,18 @@ body {
 
 .prompt-chip:hover:not(:disabled) {
   background-color: var(--clean-btn-hover);
-  border-color: var(--accent-cyan);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px -2px rgba(56, 189, 248, 0.15);
+  border-color: var(--accent-emerald);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(52, 211, 153, 0.1);
 }
 
 .prompt-chip-blocked:hover:not(:disabled) {
   border-color: var(--accent-rose);
-  box-shadow: 0 4px 12px -2px rgba(248, 113, 113, 0.15);
+  box-shadow: 0 4px 12px rgba(248, 113, 113, 0.1);
 }
 
 /* ============================================================
-   Layout — Full-Width Container (Dashboard)
+   Layout — Full-Width Container
    ============================================================ */
 .app-container {
   width: 100%;
@@ -492,7 +483,6 @@ body {
 .rounded-lg { border-radius: 0.5rem; }
 .rounded-xl { border-radius: 0.75rem; }
 .rounded-2xl { border-radius: 1rem; }
-.rounded-3xl { border-radius: 1.5rem; }
 .rounded-full { border-radius: 9999px; }
 
 /* ============================================================
